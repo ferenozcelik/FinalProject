@@ -1,5 +1,7 @@
-﻿using DataAccess.Abstract;
+﻿using Core.DataAccess.EntityFramework;
+using DataAccess.Abstract;
 using Entities.Concrete;
+using Entities.DTOs;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -9,54 +11,25 @@ using System.Text;
 
 namespace DataAccess.Concrete.EntityFramework
 {
-    public class EfProductDal : IProductDal
+    public class EfProductDal : EfEntityRepositoryBase<Product, NorthwindContext>, IProductDal
     {
-        public void Add(Product entity)
-        {
-            // using içindeki nesneler işi bittiği anda bellekten atılır
-            using (NorthwindContext context = new NorthwindContext())
-            {
-                var addedEntity = context.Entry(entity); // referansı yakala
-                addedEntity.State = EntityState.Added; // o aslında eklenecek bir nesne
-                context.SaveChanges(); // ve şimdi nesneyi ekle
-            }
-        }
-
-        public void Delete(Product entity)
+        public List<ProductDetailDto> GetProductDetails()
         {
             using (NorthwindContext context = new NorthwindContext())
             {
-                var deletedEntity = context.Entry(entity); // referansı yakala
-                deletedEntity.State = EntityState.Deleted; // o aslında silinecek bir nesne
-                context.SaveChanges(); // ve şimdi nesneyi sil
-            }
-        }
-
-        public void Update(Product entity)
-        {
-            using (NorthwindContext context = new NorthwindContext())
-            {
-                var updatedEntity = context.Entry(entity); // referansı yakala
-                updatedEntity.State = EntityState.Modified; // o aslında güncellenecek bir nesne
-                context.SaveChanges(); // ve şimdi nesneyi güncelle
-            }
-        }
-
-        public List<Product> GetAll(Expression<Func<Product, bool>> filter = null)
-        {
-            using (NorthwindContext context = new NorthwindContext())
-            {
-                return filter == null ? context.Set<Product>().ToList() :
-                    context.Set<Product>().Where(filter).ToList();
-                // filtre == null ise 54. satır çalışır, değilse 55. satır çalışır.
-            }
-        }
-
-        public Product Get(Expression<Func<Product, bool>> filter)
-        {
-            using (NorthwindContext context = new NorthwindContext())
-            {
-                return context.Set<Product>().SingleOrDefault(filter);
+                // ürünlere p de, kategorilere c de
+                // ürünlerle kategorileri join et.
+                var result = from p in context.Products
+                             join c in context.Categories
+                             on p.CategoryId equals c.CategoryId
+                             select new ProductDetailDto 
+                             { // sonucu ProductDetailDto içindeki bilgileri kullanarak vericez.
+                                 ProductId = p.ProductId, // Dto içindeki ProductId'yi, p'deki ProductId'den al.
+                                 ProductName = p.ProductName,
+                                 CategoryName = c.CategoryName,
+                                 UnitsInStock = p.UnitsInStock
+                             };
+                return result.ToList();
             }
         }
     }
